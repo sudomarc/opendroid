@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +53,12 @@ fun SplashScreen(onNavigateNext: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.alpha(alpha.value)
         ) {
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = com.opendroid.ai.R.drawable.opendroid),
+                contentDescription = "OpenDroid Logo",
+                modifier = Modifier.size(120.dp)
+            )
+            Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "OPENDROID",
                 fontSize = 36.sp,

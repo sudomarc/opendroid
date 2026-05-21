@@ -1,5 +1,9 @@
 # OpenDroid
 
+<p align="center">
+  <img src="assets/opendroid.png" alt="OpenDroid Logo" width="180px">
+</p>
+
 > **"Your Open Autonomous Android Agent"**
 
 OpenDroid is a production-ready, autonomous, self-planning AI assistant for Android. Rather than acting as a simple chat interface, OpenDroid is a fully agentic system capable of breaking complex goals into sequential sub-tasks, executing them through direct device controls and accessibility automation, monitoring execution results, and dynamically replanning when steps fail or environment conditions change.
