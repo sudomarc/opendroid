@@ -319,6 +319,10 @@ class AgentLoop @Inject constructor(
             val failed = currentPlanState.steps.filter { it.status == StepStatus.FAILED }
             val remaining = currentPlanState.steps.filter { it.status == StepStatus.PENDING }
 
+            if (failed.isEmpty() && remaining.isEmpty()) {
+                continue
+            }
+
             val reEvalEngine = ReEvaluationEngine(llmProviderFactory)
             val reEval = reEvalEngine.evaluateStepResult(
                 originalGoal = currentPlanState.goal,
