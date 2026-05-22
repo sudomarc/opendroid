@@ -32,6 +32,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.os.Build
+import android.graphics.Bitmap
+import android.util.Base64
+import java.io.ByteArrayOutputStream
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 @AndroidEntryPoint
 class OpenDroidAccessibilityService : AccessibilityService() {
@@ -480,6 +486,58 @@ class OpenDroidAccessibilityService : AccessibilityService() {
             val child = node.getChild(i) ?: continue
             extractTextFromNode(child, sb)
             child.recycle()
+        }
+    }
+
+    suspend fun takeScreenshotAndEncode(): String? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return null
+        }
+        return suspendCoroutine { continuation ->
+            try {
+                takeScreenshot(
+                    android.view.Display.DEFAULT_DISPLAY,
+                    mainExecutor,
+                    object : TakeScreenshotCallback {
+                        override fun onSuccess(screenshotResult: ScreenshotResult) {
+                            try {
+                                val hardwareBuffer = screenshotResult.hardwareBuffer
+                                val colorSpace = screenshotResult.colorSpace
+                                val bitmap = Bitmap.wrapHardwareBuffer(hardwareBuffer, colorSpace)
+                                if (bitmap == null) {
+                                    continuation.resume(null)
+                                    return
+                                }
+                                val softwareBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false)
+                                bitmap.recycle()
+                                hardwareBuffer.close()
+
+                                if (softwareBitmap == null) {
+                                    continuation.resume(null)
+                                    return
+                                }
+
+                                val outputStream = ByteArrayOutputStream()
+                                softwareBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+                                val byteArray = outputStream.toByteArray()
+                                val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
+                                softwareBitmap.recycle()
+                                continuation.resume(base64String)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                continuation.resume(null)
+                            }
+                        }
+
+                        override fun onFailure(errorCode: Int) {
+                            continuation.resume(null)
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                continuation.resume(null)
+            }
         }
     }
 

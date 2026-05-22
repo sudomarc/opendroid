@@ -43,10 +43,22 @@ class GeminiProvider @Inject constructor(
         val contentsList = mutableListOf<Map<String, Any>>()
         request.messages.forEach { msg ->
             val role = if (msg.sender == com.opendroid.ai.data.models.ChatMessage.Sender.USER) "user" else "model"
+            val partsList = mutableListOf<Map<String, Any>>()
+            partsList.add(mapOf("text" to msg.text))
+            if (msg.imageBase64 != null && role == "user") {
+                partsList.add(
+                    mapOf(
+                        "inlineData" to mapOf(
+                            "mimeType" to "image/jpeg",
+                            "data" to msg.imageBase64
+                        )
+                    )
+                )
+            }
             contentsList.add(
                 mapOf(
                     "role" to role,
-                    "parts" to listOf(mapOf("text" to msg.text))
+                    "parts" to partsList
                 )
             )
         }

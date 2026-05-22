@@ -41,3 +41,30 @@ data class LLMResponse(
     val provider: String,
     val latencyMs: Long
 )
+
+fun List<ChatMessage>.toOpenAIMessages(systemPrompt: String): List<Map<String, Any>> {
+    val messagesList = mutableListOf<Map<String, Any>>()
+    messagesList.add(mapOf("role" to "system", "content" to systemPrompt))
+    this.forEach { msg ->
+        val role = if (msg.sender == ChatMessage.Sender.USER) "user" else "assistant"
+        if (msg.imageBase64 != null && role == "user") {
+            messagesList.add(
+                mapOf(
+                    "role" to role,
+                    "content" to listOf(
+                        mapOf("type" to "text", "text" to msg.text),
+                        mapOf(
+                            "type" to "image_url",
+                            "image_url" to mapOf(
+                                "url" to "data:image/jpeg;base64,${msg.imageBase64}"
+                            )
+                        )
+                    )
+                )
+            )
+        } else {
+            messagesList.add(mapOf("role" to role, "content" to msg.text))
+        }
+    }
+    return messagesList
+}

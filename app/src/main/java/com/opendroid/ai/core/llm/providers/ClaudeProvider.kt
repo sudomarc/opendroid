@@ -45,10 +45,29 @@ class ClaudeProvider @Inject constructor(
             "claude-3-5-sonnet-20241022"
         }
 
-        val messagesList = mutableListOf<Map<String, String>>()
+        val messagesList = mutableListOf<Map<String, Any>>()
         request.messages.forEach { msg ->
             val role = if (msg.sender == com.opendroid.ai.data.models.ChatMessage.Sender.USER) "user" else "assistant"
-            messagesList.add(mapOf("role" to role, "content" to msg.text))
+            if (msg.imageBase64 != null && role == "user") {
+                messagesList.add(
+                    mapOf(
+                        "role" to role,
+                        "content" to listOf(
+                            mapOf("type" to "text", "text" to msg.text),
+                            mapOf(
+                                "type" to "image",
+                                "source" to mapOf(
+                                    "type" to "base64",
+                                    "media_type" to "image/jpeg",
+                                    "data" to msg.imageBase64
+                                )
+                            )
+                        )
+                    )
+                )
+            } else {
+                messagesList.add(mapOf("role" to role, "content" to msg.text))
+            }
         }
 
         val requestBodyMap = mutableMapOf<String, Any>(

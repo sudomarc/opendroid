@@ -40,12 +40,7 @@ class CopilotProvider @Inject constructor(
         val startTime = System.currentTimeMillis()
 
         // Build messages payload
-        val messagesList = mutableListOf<Map<String, String>>()
-        messagesList.add(mapOf("role" to "system", "content" to request.systemPrompt))
-        request.messages.forEach { msg ->
-            val role = if (msg.sender == com.opendroid.ai.data.models.ChatMessage.Sender.USER) "user" else "assistant"
-            messagesList.add(mapOf("role" to role, "content" to msg.text))
-        }
+        val messagesList = request.messages.toOpenAIMessages(request.systemPrompt)
 
         val requestBodyMap = mutableMapOf<String, Any>(
             "model" to config.activeModel,

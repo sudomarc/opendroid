@@ -33,12 +33,7 @@ class GroqProvider @Inject constructor(
 
         val startTime = System.currentTimeMillis()
 
-        val messagesList = mutableListOf<Map<String, String>>()
-        messagesList.add(mapOf("role" to "system", "content" to request.systemPrompt))
-        request.messages.forEach { msg ->
-            val role = if (msg.sender == com.opendroid.ai.data.models.ChatMessage.Sender.USER) "user" else "assistant"
-            messagesList.add(mapOf("role" to role, "content" to msg.text))
-        }
+        val messagesList = request.messages.toOpenAIMessages(request.systemPrompt)
 
         val selectedModel = if (config.activeModel in availableModels) config.activeModel else "llama-3.3-70b-specdec"
 

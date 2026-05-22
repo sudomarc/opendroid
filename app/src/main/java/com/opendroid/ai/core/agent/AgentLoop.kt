@@ -65,12 +65,16 @@ class AgentLoop @Inject constructor(
             try {
                 _agentState.value = AgentState.Thinking
                 
+                // Capture screenshot of the active screen if accessibility service is active
+                val screenshotBase64 = com.opendroid.ai.accessibility.OpenDroidAccessibilityService.getInstance()?.takeScreenshotAndEncode()
+
                 // Save user message
                 val userMsg = ChatMessage(
                     id = UUID.randomUUID().toString(),
                     text = query,
                     sender = ChatMessage.Sender.USER,
-                    modelBadge = null
+                    modelBadge = null,
+                    imageBase64 = screenshotBase64
                 )
                 memoryManager.storeMessage(userMsg)
                 conversationRepository.insertMessage(userMsg)
@@ -78,9 +82,9 @@ class AgentLoop @Inject constructor(
                 // 1. Intent Classification
                 val requiresAction = intentClassifier.requiresAction(query)
                 if (requiresAction) {
-                    generatePlan(query, context)
+                    generatePlan(userMsg, context)
                 } else {
-                    executeSimpleQuery(query)
+                    executeSimpleQuery(userMsg)
                 }
             } catch (e: Exception) {
                 _agentState.value = AgentState.Error(e.localizedMessage ?: "Unknown processing error")
@@ -88,10 +92,10 @@ class AgentLoop @Inject constructor(
         }
     }
 
-    private suspend fun executeSimpleQuery(query: String) {
+    private suspend fun executeSimpleQuery(userMsg: ChatMessage) {
         try {
             val provider = llmProviderFactory.getActiveProvider()
-            val relevantContext = memoryManager.getRelevantContext(query)
+            val relevantContext = memoryManager.getRelevantContext(userMsg.text)
             
             val systemPrompt = """
                 You are OpenDroid, a professional and precise autonomous Android AI Assistant. 
@@ -101,7 +105,13 @@ class AgentLoop @Inject constructor(
                 $relevantContext
             """.trimIndent()
 
-            val lastMsgs = conversationRepository.getLastMessages(10)
+            val lastMsgs = conversationRepository.getLastMessages(10).map { msg ->
+                if (msg.id == userMsg.id) {
+                    msg.copy(imageBase64 = userMsg.imageBase64)
+                } else {
+                    msg
+                }
+            }
 
             val replyId = UUID.randomUUID().toString()
             var currentReplyText = ""
@@ -151,10 +161,10 @@ class AgentLoop @Inject constructor(
         }
     }
 
-    private suspend fun generatePlan(query: String, context: Context) {
+    private suspend fun generatePlan(userMsg: ChatMessage, context: Context) {
         try {
             val provider = llmProviderFactory.getActiveProvider()
-            val relevantContext = memoryManager.getRelevantContext(query)
+            val relevantContext = memoryManager.getRelevantContext(userMsg.text)
             val sysPrompt = "${PlanningPrompts.PLANNING_SYSTEM_PROMPT}\n\nContext about user and device:\n$relevantContext"
             
             val config = settingsRepository.llmConfig.first()
@@ -164,9 +174,7 @@ class AgentLoop @Inject constructor(
                         provider.complete(
                             LLMRequest(
                                 systemPrompt = sysPrompt,
-                                messages = listOf(
-                                    ChatMessage(id = UUID.randomUUID().toString(), text = query, sender = ChatMessage.Sender.USER)
-                                ),
+                                messages = listOf(userMsg),
                                 temperature = 0.2f,
                                 maxTokens = 1500,
                                 responseFormat = ResponseFormat.JSON
@@ -178,9 +186,7 @@ class AgentLoop @Inject constructor(
                         provider.complete(
                             LLMRequest(
                                 systemPrompt = PlanningPrompts.CRITIC_SYSTEM_PROMPT,
-                                messages = listOf(
-                                    ChatMessage(id = UUID.randomUUID().toString(), text = query, sender = ChatMessage.Sender.USER)
-                                ),
+                                messages = listOf(userMsg),
                                 temperature = 0.2f,
                                 maxTokens = 1000,
                                 responseFormat = ResponseFormat.TEXT
@@ -194,7 +200,7 @@ class AgentLoop @Inject constructor(
                     val mergePrompt = """
                         ${PlanningPrompts.MERGE_SYSTEM_PROMPT}
                         
-                        User Goal: $query
+                        User Goal: ${userMsg.text}
                         Initial Plan: ${plannerResponse.content}
                         Critic Safety & Edge Case Report: ${criticResponse.content}
                     """.trimIndent()
@@ -203,7 +209,12 @@ class AgentLoop @Inject constructor(
                         LLMRequest(
                             systemPrompt = mergePrompt,
                             messages = listOf(
-                                ChatMessage(id = UUID.randomUUID().toString(), text = "Merge the plan and critique into the final JSON plan.", sender = ChatMessage.Sender.USER)
+                                ChatMessage(
+                                    id = UUID.randomUUID().toString(),
+                                    text = "Merge the plan and critique into the final JSON plan.",
+                                    sender = ChatMessage.Sender.USER,
+                                    imageBase64 = userMsg.imageBase64
+                                )
                             ),
                             temperature = 0.1f,
                             maxTokens = 1500,
@@ -218,9 +229,7 @@ class AgentLoop @Inject constructor(
                 val response = provider.complete(
                     LLMRequest(
                         systemPrompt = sysPrompt,
-                        messages = listOf(
-                            ChatMessage(id = UUID.randomUUID().toString(), text = query, sender = ChatMessage.Sender.USER)
-                        ),
+                        messages = listOf(userMsg),
                         temperature = 0.1f,
                         maxTokens = 1500,
                         responseFormat = ResponseFormat.JSON
@@ -238,7 +247,7 @@ class AgentLoop @Inject constructor(
             }
         } catch (e: Exception) {
             // Fallback: If planning fails, process as simple query
-            executeSimpleQuery(query)
+            executeSimpleQuery(userMsg)
         }
     }
 
