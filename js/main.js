@@ -79,8 +79,10 @@ btn.setAttribute('aria-label', 'Copy to clipboard');
 btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
 btn.addEventListener('click', async () => {
 const text = codeEl.textContent;
+let copied = false;
 try {
 await navigator.clipboard.writeText(text);
+copied = true;
 } catch (e) {
 const ta = document.createElement('textarea');
 ta.value = text;
@@ -88,18 +90,47 @@ ta.style.position = 'fixed';
 ta.style.opacity = '0';
 document.body.appendChild(ta);
 ta.select();
-try { document.execCommand('copy'); } catch (e2) { /* give up quietly */ }
+try { copied = document.execCommand('copy'); } catch (e2) { copied = false; }
 document.body.removeChild(ta);
 }
+if (copied) {
 btn.setAttribute('data-copied', 'true');
 btn.setAttribute('aria-label', 'Copied');
 setTimeout(() => {
 btn.removeAttribute('data-copied');
 btn.setAttribute('aria-label', 'Copy to clipboard');
 }, 1800);
+} else {
+btn.setAttribute('data-copy-failed', 'true');
+btn.setAttribute('aria-label', 'Copy failed — copy manually');
+setTimeout(() => {
+btn.removeAttribute('data-copy-failed');
+btn.setAttribute('aria-label', 'Copy to clipboard');
+}, 1800);
+}
 });
 wrapper.appendChild(btn);
 });
+const heroVideo = document.getElementById('hero-video');
+const heroVideoToggle = document.getElementById('hero-video-toggle');
+if (heroVideo && heroVideoToggle) {
+const syncState = () => {
+const paused = heroVideo.paused;
+heroVideoToggle.classList.toggle('paused', paused);
+heroVideoToggle.setAttribute('aria-pressed', String(!paused));
+heroVideoToggle.setAttribute('aria-label', paused ? 'Play video' : 'Pause video');
+};
+heroVideoToggle.addEventListener('click', () => {
+if (heroVideo.paused) {
+heroVideo.play();
+} else {
+heroVideo.pause();
+}
+});
+heroVideo.addEventListener('play', syncState);
+heroVideo.addEventListener('pause', syncState);
+syncState();
+}
 const ghStats = document.getElementById('gh-stats');
 if (ghStats) {
 fetch('https://api.github.com/repos/yashab-cyber/opendroid')
