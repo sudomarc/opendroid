@@ -13,6 +13,8 @@ This clone has two remotes:
 
 `gh api` is the exception: it has no `--repo` flag and rejects one as an unknown flag. Encode the repository in the endpoint path instead — `repos/sudomarc/opendroid/...`.
 
+**Why `--repo` is mandatory, not just tidy:** GitHub's own default for a fork is to point new PRs at `upstream` (`yashab-cyber/opendroid`), confirmed by GitHub support — not a bug, not fork-specific misconfiguration. `gh pr create --repo sudomarc/opendroid ...` overrides that default explicitly; a bare `gh pr create` does not, and neither does the web UI's "Compare & pull request" button unless the base-repository dropdown is changed by hand before submitting. Don't rely on memory of "I always pass `--repo`" — if you're ever about to run `gh pr create` or open a PR via the browser, treat the absence of an explicit, verified `sudomarc/opendroid` target as a stop condition.
+
 ## Conventions
 
 - **Create an issue**: `gh issue create --repo sudomarc/opendroid --title "..." --body "..."`. Use a heredoc for multi-line bodies.

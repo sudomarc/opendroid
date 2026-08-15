@@ -35,6 +35,21 @@ itself gets developed.
 - **Don't guess, say so.** If you can't verify something (no `gh` auth, no network, file
   not found), say `NOT VERIFIABLE — <reason>` rather than a plausible-sounding guess.
 
+## Opening a PR — always specify the target explicitly
+
+This repo is a **fork**. GitHub's own default behavior for forks is to point any new pull
+request at the **upstream** repo (`yashab-cyber/opendroid`), not at this one — confirmed by
+GitHub support, not a bug. That default applies whether the PR is opened from the web UI's
+"Compare & pull request" button or from a bare `gh pr create`.
+
+- **Never** run `gh pr create` without explicit flags. Always:
+  `gh pr create --repo sudomarc/opendroid --base main --head <branch>`
+- If using the web UI, check/change the "base repository" dropdown to `sudomarc/opendroid`
+  before clicking "Create pull request" — don't trust the preselected value.
+- Same applies to `git push`: only push to a remote you've explicitly verified points at
+  `sudomarc/opendroid` (`git remote -v`). Never add `yashab-cyber/opendroid` as a remote
+  for this fork's own work.
+
 ## Agent skills
 
 ### Issue tracker
