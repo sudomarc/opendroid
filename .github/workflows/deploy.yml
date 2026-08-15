@@ -22,6 +22,13 @@ jobs:
       - name: Build Website (minify CSS/JS)
         run: bash website/build.sh
 
+      - name: Validate Website Dist Artifacts
+        run: |
+          test -f ./website/dist/index.html
+          test -f ./website/dist/css/style.css
+          test -f ./website/dist/js/main.js
+          echo "Website build dist validation passed."
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
