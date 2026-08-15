@@ -33,6 +33,10 @@
 
 ---
 
+> **📌 This is a fork.** `sudomarc/opendroid` is a personal fork of [`yashab-cyber/opendroid`](https://github.com/yashab-cyber/opendroid), kept specifically to iterate on the **marketing website** (the [`website/`](website/) folder — landing page, features/about/pricing pages, static assets). It is **not** where the Android app itself is developed. For the original project, the Android app, and the upstream issue tracker, go to [yashab-cyber/opendroid](https://github.com/yashab-cyber/opendroid). Website changes made on this fork don't sync automatically in either direction — see [`AGENTS.md`](AGENTS.md) for how agents working on this fork should treat the two remotes.
+
+---
+
 ## 🎯 What is OpenDroid?
 
 OpenDroid isn't just another chatbot. It's a **fully autonomous AI agent** that lives on your Android phone and actually *does things* for you.
@@ -198,8 +202,8 @@ OpenDroid supports **12 LLM providers** with automatic failover:
 ### Build & Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/yashab-cyber/opendroid.git
+# Clone this fork (website work happens here)
+git clone https://github.com/sudomarc/opendroid.git
 cd opendroid
 
 # Build debug APK
@@ -208,6 +212,8 @@ cd opendroid
 # APK output location
 # → app/build/outputs/apk/debug/app-debug.apk
 ```
+
+> For Android app development (not website work), clone the upstream instead: `git clone https://github.com/yashab-cyber/opendroid.git`
 
 ### Required Permissions
 
@@ -276,5 +282,5 @@ limitations under the License.
 </p>
 
 <p align="center">
-  <a href="https://github.com/yashab-cyber/opendroid">⭐ Star this repo</a> if OpenDroid has helped you!
+  <a href="https://github.com/yashab-cyber/opendroid">⭐ Star the original repo</a> if OpenDroid has helped you — this fork (<a href="https://github.com/sudomarc/opendroid">sudomarc/opendroid</a>) maintains the website only.
 </p>
