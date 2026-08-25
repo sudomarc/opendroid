@@ -1,21 +1,24 @@
 name: Temporary Feature Fragment Fix
 
 on:
-  push:
+  pull_request:
     branches:
-      - fix/website-feature-fragments-20260825
+      - main
+    paths:
+      - 'website/**'
+      - '.github/workflows/temporary-fix-feature-fragments.yml'
 
 permissions:
   contents: write
 
 jobs:
   fix:
-    if: ${{ github.event.head_commit.message != 'fix(website): repair feature fragment links' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout PR branch
         uses: actions/checkout@v7.0.1
         with:
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
 
       - name: Repair legacy feature fragments
@@ -45,10 +48,7 @@ jobs:
                   path.write_text(updated, encoding='utf-8')
                   changed.append(str(path))
 
-          if not changed:
-              raise SystemExit('No legacy feature fragments found; refusing to create an empty fix commit.')
-
-          print('Updated:')
+          print('Updated:' if changed else 'No legacy feature fragments remain.')
           for path in changed:
               print(f' - {path}')
           PY
@@ -61,15 +61,17 @@ jobs:
           bash website/build.sh
           python3 website/tests/validate.py website/dist
 
-      - name: Commit fix
+      - name: Commit and push source fix
+        if: ${{ hashFiles('website/*.html') != '' && success() }}
+        shell: bash
         run: |
           set -euo pipefail
-          if git grep -n -E 'features\.html#feat-(planning|routines|telegram|device|memory|vision|accessibility)' -- 'website/*.html'; then
-            echo 'Legacy feature fragments remain after replacement.'
-            exit 1
+          if ! git grep -n -E 'features\.html#feat-(planning|routines|telegram|device|memory|vision|accessibility)' -- 'website/*.html'; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            if ! git diff --quiet -- website/*.html; then
+              git add website/*.html
+              git commit -m 'fix(website): repair feature fragment links'
+              git push origin HEAD:${{ github.head_ref }}
+            fi
           fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add website/*.html
-          git commit -m 'fix(website): repair feature fragment links'
-          git push
