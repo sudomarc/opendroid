@@ -1,4 +1,4 @@
-name: Deploy OpenDroid Premium Website
+name: Deploy OpenDroid Website
 
 on:
   push:
@@ -19,14 +19,38 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Validate HTML & Link Integrity
+        run: |
+          python3 -c "
+          import os, glob, re
+          html_files = glob.glob('website/*.html')
+          for f in html_files:
+              with open(f, 'r') as file:
+                  content = file.read()
+                  for tag in ['div', 'main', 'header', 'footer', 'section', 'nav']:
+                      open_c = len(re.findall(rf'<{tag}[\s>]', content, re.IGNORECASE))
+                      close_c = len(re.findall(rf'</{tag}>', content, re.IGNORECASE))
+                      assert open_c == close_c, f'Tag mismatch <{tag}> in {f}'
+          print('CI Validation passed successfully.')
+          "
+
       - name: Build Website (minify CSS/JS)
         run: bash website/build.sh
 
       - name: Validate Website Dist Artifacts
         run: |
           test -f ./website/dist/index.html
+          test -f ./website/dist/about.html
+          test -f ./website/dist/features.html
+          test -f ./website/dist/contributor.html
+          test -f ./website/dist/privacy.html
+          test -f ./website/dist/security.html
+          test -f ./website/dist/support.html
+          test -f ./website/dist/terms.html
           test -f ./website/dist/css/style.css
           test -f ./website/dist/js/main.js
+          test -f ./website/dist/robots.txt
+          test -f ./website/dist/sitemap.xml
           echo "Website build dist validation passed."
 
       - name: Deploy to GitHub Pages
@@ -35,4 +59,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./website/dist
           publish_branch: gh-pages
-
