@@ -4,11 +4,124 @@ This document tracks release updates, changelogs, and binary verification checks
 
 ---
 
-## v1.0.4 — Latest Release (August 10, 2026)
+## v1.0.6 — Latest Release (August 20, 2026)
 
 Current release. Sideload the APK for direct install, or use the AAB for Play Store distribution.
 
-### Highlights since v1.0.3 (PR #46 by @JMAN730)
+### Highlights since v1.0.5
+
+#### 🔄 Habit & Routine Detection Engine
+*   **Proactive Pattern Recognition**: OpenDroid tracks app usage habits over time and detects repeated daily/weekly workflows (e.g., every weekday at 9:00 AM: *Gmail $\to$ Calendar $\to$ Slack $\to$ Chrome*).
+*   **Proactive Automation Prompts**: Surfaces smart suggestions with confidence metrics: *"I noticed you usually do these tasks every weekday morning. Would you like me to automate them?"*
+*   **Multi-Step Morning Routine Automation**: Automatically synthesizes structured morning briefings:
+    1. Read today's calendar (`LIST_CALENDAR_TODAY`)
+    2. Summarize upcoming meetings (`GET_MORNING_BRIEFING`, `section = "schedule"`)
+    3. Check important notifications (`READ_NOTIFICATIONS`)
+    4. Prepare task list from notes (`READ_NOTES`)
+    5. Read selected messages (`READ_NOTIFICATIONS`)
+    6. Deliver spoken or text morning briefing (`GET_MORNING_BRIEFING`, `section = "full"`)
+*   **One-Click Approval & Macro Scheduling**: User approval converts detected routines into recurring scheduled macros in `MacroDao` and logs knowledge nodes in `PersonalGrowthEngine`.
+*   **Dedicated Routines Screen**: Added modern UI screen (`RoutinesScreen.kt`) with suggestion approval cards, active routines list, template presets (*Morning Routine*, *Work Focus*, *Evening Wrap-up*), and learning analytics.
+*   **Room Database Migration `MIGRATION_7_8`**: Added `habit_events` and `habit_routines` tables, upgrading schema to version 8.
+
+#### ✈️ Telegram Control & Automation
+*   **Full Telegram Automation**: OpenDroid now supports end-to-end messaging and chat control on Telegram alongside WhatsApp and SMS.
+*   **`SEND_TELEGRAM` & `OPEN_TELEGRAM` Actions**: Direct handling of `@username` handles, contact address book lookups, international phone numbers, and chat links (`tg://resolve`, `https://t.me/`).
+*   **`TelegramAutomator`**: Automatic accessibility typing and sending across official Telegram, Telegram Web/FOSS, Plus Messenger, and NekoX.
+*   **Habit Engine Integration**: Package recognition tracks Telegram workflows in routine mining.
+
+#### 🧪 LiteRT Model Compatibility & Probe Fixes
+*   **Model Verification Fix**: Fixed a bug where downloaded LiteRT models (such as `Gemma 4 e2b-it` and `Qwen 2.5`) falsely reported `FORMAT_INVALID` during initialization verification.
+*   **Failure Marker Matching**: Corrected probe verification logic from strict `.all` failure matching to `.any` marker matching and expanded backend-specific error classification for GPU/NPU/CPU fallbacks.
+
+#### 🛠️ Version & Build Updates
+*   **Version Bump**: Updated app version to `1.0.6` (`versionCode 7`).
+*   **Comprehensive Test Coverage**: Added `HabitRoutineEngineTest`, `RoutineActionsTest`, and `TelegramActionsTest` with 100% passing test suite.
+
+### Release Assets
+*   **`app-debug.apk`** — Debug build APK for developer testing & logging.
+*   **`app-release.apk`** — Release APK (sideload for testing).
+*   **`app-debug.aab`** — Debug Android App Bundle.
+*   **`app-release.aab`** — Release Android App Bundle.
+
+### Checksums (SHA-256)
+*   **`app-debug.apk`**: `07025caea20b4c9e32c7889549777266605e94361985ec4ce790f988920b4d63`
+*   **`app-release.apk`**: `c10b8ec614d38aab2f0bbaa254d38bc7ec7bde7b296963b74ddda86e12748a6e`
+*   **`app-debug.aab`**: `e2025affd0d0f344085b16eb486295f7fca9b513cf5159a3781b9c839eb1c149`
+*   **`app-release.aab`**: `de9bd177e4274cc97ec45913d2ce2e59389291bed45d0eddbd770bbe9e956f23`
+
+### Build Configuration
+*   **Package**: `com.opendroid.aiagent`
+*   **Version Code**: 7
+*   **Version Name**: 1.0.6
+*   **Min SDK**: 26 (Android 8.0)
+*   **Target SDK**: 36 (Android 16)
+
+### Install notes for testers
+1. Download `app-release.apk` or `app-debug.apk` from the GitHub release.
+2. Enable install from unknown sources for your browser/file manager.
+3. Sideload the APK; uninstall any prior build with a different signing key if Android blocks the update.
+4. Report issues against tag `v1.0.6`.
+
+---
+
+## v1.0.5 (August 18, 2026)
+
+### Highlights since v1.0.4
+
+#### 🧠 Screen Understanding → “Read & Remember”
+*   **Multimodal Screen Extraction**: Added `extractAndStructureScreenInfo` to `VisionEngine` combining screen captures with text accessibility tree fallback to automatically extract meeting details (*Title, Date, Time, Location, Participants, Action Items*), key points, and notes.
+*   **`READ_AND_REMEMBER_SCREEN` Action**: Added dedicated action and natural language fast-paths for triggers such as *"Read this screen and save the important information to my notes"*, *"Read this WhatsApp message and save the meeting details"*, *"Remember this"*, and *"Add this to my notes"*.
+*   **`RECALL_MEMORY` Action**: Allows querying and recalling stored screen notes, facts, and memories (*"What did I save about X?"*, *"Read my notes"*).
+*   **Persistent Room Storage**: Screen extractions persist into SQLite via `MemoryRepository` under `MemoryType.SEMANTIC` and automatically surface in Memory and LLM context.
+
+#### 📈 Personal Growth Memory (Personal Knowledge Graph & Tiered Memory)
+*   **Personal Knowledge Graph**: Organizes learned intelligence into a structured knowledge graph with entity nodes (`KnowledgeNode`), categories (`KnowledgeCategory`: `CONTACT`, `TASK_ROUTINE`, `APP_PREFERENCE`, `SCHEDULE`, `PROJECT`, `RESOURCE`, `NOTE_FACT`, `USER_PREFERENCE`), and relations (`KnowledgeRelation`).
+*   **4-Tier Security & Retention Hierarchy**:
+    1.  **⚡ Level 1: Temporary Memory (`TEMPORARY`)**: Current task/session working context, active plan state, and intermediate tool results.
+    2.  **🧠 Level 2: Long-Term Memory (`LONG_TERM`)**: Explicit user facts, active projects, and custom preferences with confidence rating `1.0`.
+    3.  **📈 Level 3: Learned Patterns (`LEARNED_PATTERN`)**: Behaviors inferred from activity (frequently contacted people, preferred media apps, ride hailing choices, recurring alarm routines, frequent websites) with dynamic confidence scoring (50% → 85% → 95%).
+    4.  **🔒 Level 4: Sensitive Data (`SENSITIVE`)**: High-security confidential records (passwords, PINs, tokens) encrypted at rest using Android Keystore AES-256-GCM via `SensitiveMemoryStore`.
+*   **Knowledge Actions**: Added `QUERY_KNOWLEDGE_GRAPH`, `UPDATE_PREFERENCE`, and `SAVE_SENSITIVE_INFO` actions.
+*   **UI Growth Graph Screen**: Added interactive **GROWTH GRAPH** view in `MemoryScreen` with level filtering chips, category chips, confidence badges, one-tap pattern-to-preference promotion, and encrypted secret creation.
+
+#### 🌐 On-Device AI Cellular Network Download Warning & Support
+*   **Cellular Network Download**: Allowed LiteRT on-device AI model downloads to proceed over cellular network connections in addition to Wi-Fi.
+*   **Data Charges Warning Dialog**: Added interactive warning dialog before starting cellular downloads alert users to potential data carrier charges.
+*   **Dynamic WorkManager Network Constraints**: Configured `ModelDownloadWorkRequest` with flexible network constraints based on user choice.
+
+#### 🛠️ Toolchain & Version Bump
+*   **Version Bump**: Updated app version to `1.0.5` (`versionCode 6`).
+*   **Java 21 Alignment**: Standardized compilation on Java 21 compatibility.
+
+### Release Assets
+*   **`app-debug.apk`** — Debug build APK for developer testing & logging.
+*   **`app-release.apk`** — Release APK (sideload for testing).
+*   **`app-debug.aab`** — Debug Android App Bundle.
+*   **`app-release.aab`** — Release Android App Bundle.
+
+### Checksums (SHA-256)
+*   **`app-debug.apk`**: `857a3d7f1891f61717e23f8352479c46270eb625c936f5b6bdcd14f4fedb3b4c`
+*   **`app-release.apk`**: `30b8827d99bea209be96c152456534607f23b15c03b909bd9f672880cdfdb397`
+*   **`app-debug.aab`**: `87cc9a0f468a5ac48d00829b3f8f4a2f4fabf2f9a73d77b20c3238be406410f7`
+*   **`app-release.aab`**: `05b14dce34c169a5dad812f2adf0b6838457d252407b3ad3e651344440678894`
+
+### Build Configuration
+*   **Package**: `com.opendroid.aiagent`
+*   **Version Code**: 6
+*   **Version Name**: 1.0.5
+*   **Min SDK**: 26 (Android 8.0)
+*   **Target SDK**: 36 (Android 16)
+
+### Install notes for testers
+1. Download `app-release.apk` or `app-debug.apk` from the GitHub release.
+2. Enable install from unknown sources for your browser/file manager.
+3. Sideload the APK; uninstall any prior build with a different signing key if Android blocks the update.
+4. Report issues against tag `v1.0.5`.
+
+---
+
+## v1.0.4 (August 10, 2026)
 
 #### 🤖 Dynamic Model Fetching & Catalog Updates
 *   **Runtime Model Lists**: Every remote LLM provider (Gemini, OpenAI, Cohere, Groq, OpenRouter, etc.) now dynamically fetches its available model list directly from its respective `/models` endpoint rather than shipping hardcoded fallback lists.

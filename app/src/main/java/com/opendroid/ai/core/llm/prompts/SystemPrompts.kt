@@ -97,6 +97,7 @@ $schema
               OPEN_APP → execute immediately
               MAKE_CALL → execute, ask for number ONLY if contact is unknown
               SEND_WHATSAPP → execute, ask for contact/message ONLY if missing
+              SEND_TELEGRAM → execute, ask for contact/message ONLY if missing
               TOGGLE_WIFI → execute immediately with {state: "on", "off", or "toggle"} (defaults to toggle)
               TOGGLE_BLUETOOTH → execute immediately with {state: "on", "off", or "toggle"} (defaults to toggle)
               TOGGLE_MOBILE_DATA → execute immediately with {state: "on", "off", or "toggle"} (defaults to toggle)
@@ -118,6 +119,7 @@ $schema
 
             SELF-CONTAINED ACTIONS — these handle their own app opening internally. NEVER add an OPEN_APP step before them:
             - SEND_WHATSAPP: Opens WhatsApp, navigates to contact, and sends the message — all in one step.
+            - SEND_TELEGRAM: Opens Telegram, navigates to contact/handle, and sends the message — all in one step.
             - MAKE_CALL: Opens dialer/places call directly.
             - SEND_SMS: Sends SMS or opens SMS compose directly.
             - SEND_EMAIL: Opens a pre-filled email draft directly; the user must review and tap Send, and the app must not claim it was sent.
@@ -248,6 +250,11 @@ $schema
             - SEND_SMS: Implemented via SmsManager + messaging app fallback
             - OPEN_APP: Implemented via PackageManager
             - ANALYZE_SCREENSHOT: Implemented via Accessibility + Vision LLM
+            - READ_AND_REMEMBER_SCREEN: Implemented via Vision Engine + Semantic Memory / Notes
+            - RECALL_MEMORY: Implemented via Semantic Memory query lookup
+            - QUERY_KNOWLEDGE_GRAPH: Implemented via Personal Knowledge Graph engine
+            - UPDATE_PREFERENCE: Implemented via Long-Term Memory preference store
+            - SAVE_SENSITIVE_INFO: Implemented via AndroidKeyStore AES-256-GCM encrypted store
             If an action fails, the app handles the error automatically.
             Your job is to dispatch the action, not judge if it will work.
             Always dispatch. Never refuse.

@@ -342,6 +342,30 @@ object ActionSchema {
             category = ActionCategory.COMMUNICATION
         ),
         ActionDefinition(
+            name = "SEND_TELEGRAM",
+            description = "Sends a Telegram message to a user, channel, username (@user), or phone number",
+            params = listOf(
+                ParamDefinition("contact", ParamType.STRING, true, "Telegram username (@handle), phone number, or contact name"),
+                ParamDefinition("message", ParamType.STRING, true, "Message text to send")
+            ),
+            examples = listOf(
+                "send hello to @durov on telegram",
+                "message alice on telegram saying I'm on my way",
+                "telegram mom I will be late",
+                "send message to +1234567890 on telegram"
+            ),
+            category = ActionCategory.COMMUNICATION
+        ),
+        ActionDefinition(
+            name = "OPEN_TELEGRAM",
+            description = "Opens Telegram app or navigates to a specific chat, channel, or user",
+            params = listOf(
+                ParamDefinition("contact", ParamType.STRING, false, "Telegram username, channel, or contact name to open")
+            ),
+            examples = listOf("open telegram", "open telegram chat with @durov", "launch telegram"),
+            category = ActionCategory.COMMUNICATION
+        ),
+        ActionDefinition(
             name = "SEND_SMS",
             description = "Sends an SMS text message",
             params = listOf(
@@ -499,9 +523,88 @@ object ActionSchema {
         ActionDefinition(
             name = "READ_NOTES",
             description = "Reads saved notes",
-            params = listOf(ParamDefinition("filter", ParamType.STRING, false, "Filter criteria")),
-            examples = listOf("read my notes", "show notes"),
+            params = listOf(
+                ParamDefinition("query", ParamType.STRING, false, "Search query or topic filter", defaultValue = "")
+            ),
+            examples = listOf("read my notes", "show notes", "show my notes about meeting"),
             category = ActionCategory.PRODUCTIVITY
+        ),
+        ActionDefinition(
+            name = "READ_AND_REMEMBER_SCREEN",
+            description = "Reads the current screen, extracts important information, meeting details, dates, or notes, and saves it to memory/notes.",
+            params = listOf(
+                ParamDefinition("topic", ParamType.STRING, false, "Topic or details to extract (e.g. 'meeting details', 'important information', 'notes')", defaultValue = "important information"),
+                ParamDefinition("save_as", ParamType.STRING, false, "Target format or destination: 'note', 'memory', or 'event'", defaultValue = "note")
+            ),
+            examples = listOf(
+                "read this screen and save the important information to my notes",
+                "read this whatsapp message and save the meeting details",
+                "remember this screen",
+                "save this information to my notes",
+                "read screen and remember"
+            ),
+            category = ActionCategory.PRODUCTIVITY
+        ),
+        ActionDefinition(
+            name = "RECALL_MEMORY",
+            description = "Searches saved notes, screen memories, and facts previously stored by OpenDroid.",
+            params = listOf(
+                ParamDefinition("query", ParamType.STRING, true, "Search query or topic to recall")
+            ),
+            examples = listOf(
+                "what did i save about marketing meeting",
+                "what did i save about X",
+                "what do you remember about my doctor appointment",
+                "what did i save about friday meeting"
+            ),
+            category = ActionCategory.INFORMATION
+        ),
+        ActionDefinition(
+            name = "QUERY_KNOWLEDGE_GRAPH",
+            description = "Queries the user's Personal Knowledge Graph for learned patterns, frequent contacts, preferred apps, routines, projects, schedules, or explicit preferences across memory tiers.",
+            params = listOf(
+                ParamDefinition("query", ParamType.STRING, false, "Topic or question to query in the Knowledge Graph", defaultValue = ""),
+                ParamDefinition("category", ParamType.STRING, false, "Filter by category: CONTACT, APP_PREFERENCE, TASK_ROUTINE, SCHEDULE, PROJECT, RESOURCE, NOTE_FACT, USER_PREFERENCE, ALL", defaultValue = "ALL"),
+                ParamDefinition("tier", ParamType.STRING, false, "Filter by memory tier: TEMPORARY, LONG_TERM, LEARNED_PATTERN, SENSITIVE, ALL", defaultValue = "ALL")
+            ),
+            examples = listOf(
+                "who do i contact most often",
+                "what is my preferred music app",
+                "what are my active projects",
+                "what routines do i have",
+                "show my knowledge graph"
+            ),
+            category = ActionCategory.INFORMATION
+        ),
+        ActionDefinition(
+            name = "UPDATE_PREFERENCE",
+            description = "Saves or updates an explicit user preference or long-term memory in the Personal Knowledge Graph.",
+            params = listOf(
+                ParamDefinition("key", ParamType.STRING, true, "Preference key or label (e.g. 'preferred_music_app', 'dietary_preference', 'work_location')"),
+                ParamDefinition("value", ParamType.STRING, true, "Preference value or description"),
+                ParamDefinition("category", ParamType.STRING, false, "Category: USER_PREFERENCE, PROJECT, APP_PREFERENCE, etc.", defaultValue = "USER_PREFERENCE")
+            ),
+            examples = listOf(
+                "remember that my preferred music app is Spotify",
+                "save preference that i am vegetarian",
+                "set my work location to Downtown Office"
+            ),
+            category = ActionCategory.PRODUCTIVITY
+        ),
+        ActionDefinition(
+            name = "SAVE_SENSITIVE_INFO",
+            description = "Stores a sensitive or confidential record in Level 4 encrypted storage backed by hardware AndroidKeyStore AES-256-GCM.",
+            params = listOf(
+                ParamDefinition("key", ParamType.STRING, true, "Sensitive record identifier/key"),
+                ParamDefinition("secret", ParamType.STRING, true, "Sensitive value/secret to encrypt and protect"),
+                ParamDefinition("label", ParamType.STRING, false, "Human-readable label for reference", defaultValue = "")
+            ),
+            examples = listOf(
+                "save sensitive note secret_wifi_code with value mypassword123",
+                "securely remember locker combination 4589",
+                "save encrypted secret api_token"
+            ),
+            category = ActionCategory.ADVANCED
         ),
 
         // ── INFORMATION ─────────────────────────────────
@@ -912,6 +1015,45 @@ object ActionSchema {
             description = "Lists saved macros",
             params = emptyList(),
             examples = listOf("what macros do I have", "list my macros"),
+            category = ActionCategory.MACRO
+        ),
+        ActionDefinition(
+            name = "RUN_ROUTINE",
+            description = "Runs an automated habit routine (e.g. morning routine, evening wrap-up)",
+            params = listOf(
+                ParamDefinition("routineName", ParamType.STRING, false, "Name of the routine (e.g. Morning Routine)"),
+                ParamDefinition("routineId", ParamType.STRING, false, "ID of the routine")
+            ),
+            examples = listOf("run morning routine", "start morning briefing", "execute daily routine", "run evening wrap up"),
+            category = ActionCategory.MACRO
+        ),
+        ActionDefinition(
+            name = "GET_MORNING_BRIEFING",
+            description = "Provides a morning briefing summarizing meetings, calendar, notifications, and tasks",
+            params = listOf(
+                ParamDefinition("section", ParamType.STRING, false, "Section to summarize (full, schedule, notifications)", defaultValue = "full"),
+                ParamDefinition("speak", ParamType.BOOLEAN, false, "Whether to read briefing aloud", defaultValue = true)
+            ),
+            examples = listOf("give me my morning briefing", "morning briefing", "summarize today's meetings and notifications", "what's my schedule today"),
+            category = ActionCategory.PRODUCTIVITY
+        ),
+        ActionDefinition(
+            name = "DETECT_ROUTINES",
+            description = "Scans habit and app usage patterns to detect recurring routines",
+            params = listOf(
+                ParamDefinition("lookbackDays", ParamType.INT, false, "Days of history to analyze", defaultValue = 14)
+            ),
+            examples = listOf("detect my routines", "check my habits", "find recurring patterns", "any new routines"),
+            category = ActionCategory.MACRO
+        ),
+        ActionDefinition(
+            name = "APPROVE_ROUTINE",
+            description = "Approves a detected habit routine and converts it into active automation",
+            params = listOf(
+                ParamDefinition("routineName", ParamType.STRING, false, "Name of the routine to approve"),
+                ParamDefinition("routineId", ParamType.STRING, false, "ID of the routine")
+            ),
+            examples = listOf("approve morning routine", "automate this routine", "yes automate it"),
             category = ActionCategory.MACRO
         ),
 

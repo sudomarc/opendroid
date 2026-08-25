@@ -139,6 +139,19 @@ class ActionAutoMapper @Inject constructor() {
         "TEXT_WHATSAPP"            to "SEND_WHATSAPP",
         "WHATSAPP"                to "SEND_WHATSAPP",
 
+        // ── Telegram variants ───────────────────────────────────────
+        "OPEN_TELEGRAM"           to "OPEN_TELEGRAM",
+        "OPEN_TELEGRAM_CHAT"      to "OPEN_TELEGRAM",
+        "LAUNCH_TELEGRAM"         to "OPEN_TELEGRAM",
+        "TELEGRAM_OPEN"           to "OPEN_TELEGRAM",
+        "SEND_TELEGRAM"           to "SEND_TELEGRAM",
+        "SEND_TELEGRAM_MESSAGE"   to "SEND_TELEGRAM",
+        "TELEGRAM_MESSAGE"        to "SEND_TELEGRAM",
+        "TELEGRAM_SEND"           to "SEND_TELEGRAM",
+        "MESSAGE_TELEGRAM"        to "SEND_TELEGRAM",
+        "TEXT_TELEGRAM"           to "SEND_TELEGRAM",
+        "TELEGRAM"                to "SEND_TELEGRAM",
+
         // ── SMS variants ────────────────────────────────────────────
         "OPEN_MESSAGES"           to "SEND_SMS",
         "OPEN_SMS"                to "SEND_SMS",
@@ -282,6 +295,46 @@ class ActionAutoMapper @Inject constructor() {
         "ROUTE"                   to "GET_DIRECTIONS",
         "FIND_ROUTE"              to "GET_DIRECTIONS",
 
+        // ── Read & Remember / Screen Understanding ───────────────────
+        "READ_SCREEN_AND_SAVE"    to "READ_AND_REMEMBER_SCREEN",
+        "READ_SCREEN_TO_NOTES"    to "READ_AND_REMEMBER_SCREEN",
+        "SAVE_SCREEN_TO_NOTES"    to "READ_AND_REMEMBER_SCREEN",
+        "REMEMBER_SCREEN"         to "READ_AND_REMEMBER_SCREEN",
+        "EXTRACT_SCREEN_INFO"     to "READ_AND_REMEMBER_SCREEN",
+        "READ_AND_SAVE"           to "READ_AND_REMEMBER_SCREEN",
+        "SAVE_SCREEN_INFO"        to "READ_AND_REMEMBER_SCREEN",
+        "REMEMBER_THIS"           to "READ_AND_REMEMBER_SCREEN",
+        "SAVE_THIS"               to "READ_AND_REMEMBER_SCREEN",
+        "SCREEN_UNDERSTANDING"    to "READ_AND_REMEMBER_SCREEN",
+        "READ_AND_REMEMBER"       to "READ_AND_REMEMBER_SCREEN",
+
+        // ── Notes / Memory variants ───────────────────────────────────
+        "SAVE_TO_NOTES"           to "ADD_NOTE",
+        "CREATE_NOTE"             to "ADD_NOTE",
+        "SAVE_NOTE"               to "ADD_NOTE",
+        "NEW_NOTE"                to "ADD_NOTE",
+        "MAKE_NOTE"               to "ADD_NOTE",
+        "SEARCH_NOTES"            to "READ_NOTES",
+        "VIEW_NOTES"              to "READ_NOTES",
+        "SHOW_NOTES"              to "READ_NOTES",
+        "GET_NOTES"               to "READ_NOTES",
+        "LIST_NOTES"              to "READ_NOTES",
+        "SEARCH_MEMORY"           to "RECALL_MEMORY",
+        "GET_MEMORY"              to "RECALL_MEMORY",
+        "QUERY_MEMORY"            to "RECALL_MEMORY",
+        "RECALL"                  to "RECALL_MEMORY",
+        "RECALL_FACTS"            to "RECALL_MEMORY",
+        "KNOWLEDGE_GRAPH"         to "QUERY_KNOWLEDGE_GRAPH",
+        "GET_KNOWLEDGE_GRAPH"     to "QUERY_KNOWLEDGE_GRAPH",
+        "SEARCH_KNOWLEDGE_GRAPH"  to "QUERY_KNOWLEDGE_GRAPH",
+        "GET_PREFERENCES"         to "QUERY_KNOWLEDGE_GRAPH",
+        "SAVE_PREFERENCE"         to "UPDATE_PREFERENCE",
+        "SET_PREFERENCE"          to "UPDATE_PREFERENCE",
+        "REMEMBER_PREFERENCE"     to "UPDATE_PREFERENCE",
+        "SAVE_SECRET"             to "SAVE_SENSITIVE_INFO",
+        "STORE_SENSITIVE"         to "SAVE_SENSITIVE_INFO",
+        "SAVE_ENCRYPTED_NOTE"     to "SAVE_SENSITIVE_INFO",
+
         // ── Security/privacy hallucinations → SKIP ──────────────────
         "CONFIRM_CONTACT"         to SKIP,
         "VERIFY_CONTACT"          to SKIP,
@@ -351,6 +404,10 @@ class ActionAutoMapper @Inject constructor() {
         // WhatsApp (before generic MESSAGE)
         SemanticRule(listOf("WHATSAPP"), emptyList(), "SEND_WHATSAPP"),
 
+        // Telegram (before generic MESSAGE)
+        SemanticRule(listOf("OPEN", "TELEGRAM"), emptyList(), "OPEN_TELEGRAM"),
+        SemanticRule(listOf("TELEGRAM"), emptyList(), "SEND_TELEGRAM"),
+
         // SMS (before generic MESSAGE)
         SemanticRule(listOf("SMS"), emptyList(), "SEND_SMS"),
 
@@ -397,6 +454,13 @@ class ActionAutoMapper @Inject constructor() {
         // Navigation
         SemanticRule(listOf("DIRECTION"), emptyList(), "GET_DIRECTIONS"),
         SemanticRule(listOf("NAVIGATE"), listOf("URL", "WEB", "BROWSER"), "GET_DIRECTIONS"),
+
+        // Routines & Briefings
+        SemanticRule(listOf("BRIEFING"), emptyList(), "GET_MORNING_BRIEFING"),
+        SemanticRule(listOf("MORNING", "SUMMARY"), emptyList(), "GET_MORNING_BRIEFING"),
+        SemanticRule(listOf("DETECT", "ROUTINE"), emptyList(), "DETECT_ROUTINES"),
+        SemanticRule(listOf("APPROVE", "ROUTINE"), emptyList(), "APPROVE_ROUTINE"),
+        SemanticRule(listOf("ROUTINE"), emptyList(), "RUN_ROUTINE"),
 
         // Flashlight
         SemanticRule(listOf("FLASHLIGHT"), emptyList(), "TOGGLE_FLASHLIGHT"),

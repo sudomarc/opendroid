@@ -28,7 +28,8 @@ class PlanValidator @Inject constructor(
             "CHECK_BALANCE", "LIST_CALENDAR_TODAY", "LIST_CALENDAR_WEEK",
             "READ_MESSAGES", "READ_EMAILS", "READ_NOTES", "READ_FILE",
             "LIST_FILES", "GET_SCREEN_TEXT", "LIST_INSTALLED_APPS",
-            "ASK_USER", "SPLIT_BILL"
+            "ASK_USER", "SPLIT_BILL", "ANALYZE_SCREENSHOT",
+            "READ_AND_REMEMBER_SCREEN", "RECALL_MEMORY", "QUERY_KNOWLEDGE_GRAPH"
         )
     }
 
@@ -92,15 +93,18 @@ class PlanValidator @Inject constructor(
                 }
             }
 
-            val commActions = listOf("SEND_WHATSAPP", "MAKE_CALL", "SEND_SMS", "MAKE_VIDEO_CALL")
+            val commActions = listOf("SEND_WHATSAPP", "SEND_TELEGRAM", "MAKE_CALL", "SEND_SMS", "MAKE_VIDEO_CALL")
             if (commActions.contains(updatedStep.action.uppercase()) && updatedStep.params.containsKey("contact")) {
                 val contactName = updatedStep.params["contact"] ?: ""
-                if (contactName.isNotEmpty() && !isPhoneNumber(contactName)) {
+                if (contactName.isNotEmpty() && !isPhoneNumber(contactName) && !contactName.startsWith("@")) {
                     val resolvedPhone = resolveContactToPhoneNumber(context, contactName)
                     if (resolvedPhone != null) {
                         val updatedParams = updatedStep.params.toMutableMap().apply { put("contact", resolvedPhone) }
                         updatedStep = updatedStep.copy(order = currentOrder++, params = updatedParams)
                         finalSteps.add(updatedStep)
+                    } else if (updatedStep.action.uppercase() == "SEND_TELEGRAM") {
+                        // For Telegram, a contact name could also be a Telegram username directly
+                        finalSteps.add(updatedStep.copy(order = currentOrder++))
                     } else {
                         val askStepId = "${updatedStep.stepId}_ask"
                         val askStep = PlanStep(
