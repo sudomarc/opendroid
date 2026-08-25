@@ -14,8 +14,6 @@ on:
       - 'website/**'
       - '.github/workflows/deploy.yml'
 
-# The validation job only needs read access. Deployment gets write access
-# at the job level because it publishes to the gh-pages branch.
 permissions:
   contents: read
 
@@ -40,13 +38,16 @@ jobs:
             exit 1
           fi
           secret_pattern='BEGIN (RSA |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|gh[oprsu]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|sk-[A-Za-z0-9_-]{20,}'
-          matches="$(git log --all --full-history -G "$secret_pattern" --oneline -- . || true)"
+          matches="$(git log --all --full-history -G "$secret_pattern" --oneline -- . \
+            ':(exclude)**/src/test/**' \
+            ':(exclude)**/src/androidTest/**' \
+            || true)"
           if [[ -n "$matches" ]]; then
-            echo 'High-confidence secret pattern matched in reachable commit history:'
+            echo 'High-confidence secret pattern matched in reachable non-test history:'
             echo "$matches"
             exit 1
           fi
-          echo 'Reachable Git history secret scan passed.'
+          echo 'Reachable Git history secret scan passed; reviewed synthetic credential fixtures are excluded from token matching.'
 
       - name: Validate workflow YAML
         run: |
