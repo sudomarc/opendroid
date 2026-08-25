@@ -1,0 +1,75 @@
+name: Temporary Feature Fragment Fix
+
+on:
+  push:
+    branches:
+      - fix/website-feature-fragments-20260825
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ github.event.head_commit.message != 'fix(website): repair feature fragment links' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Repair legacy feature fragments
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              'features.html#feat-planning': 'features.html#showcase-planning',
+              'features.html#feat-routines': 'features.html#showcase-routines',
+              'features.html#feat-telegram': 'features.html#showcase-telegram',
+              'features.html#feat-device': 'features.html#showcase-device',
+              'features.html#feat-memory': 'features.html#showcase-memory',
+              'features.html#feat-vision': 'features.html#showcase-screen-understanding',
+              'features.html#feat-accessibility': 'features.html#showcase-accessibility',
+          }
+
+          changed = []
+          for path in sorted(Path('website').glob('*.html')):
+              text = path.read_text(encoding='utf-8')
+              updated = text
+              for old, new in replacements.items():
+                  updated = updated.replace(old, new)
+              if updated != text:
+                  path.write_text(updated, encoding='utf-8')
+                  changed.append(str(path))
+
+          if not changed:
+              raise SystemExit('No legacy feature fragments found; refusing to create an empty fix commit.')
+
+          print('Updated:')
+          for path in changed:
+              print(f' - {path}')
+          PY
+
+      - name: Validate source
+        run: python3 website/tests/validate.py website
+
+      - name: Build and validate dist
+        run: |
+          bash website/build.sh
+          python3 website/tests/validate.py website/dist
+
+      - name: Commit fix
+        run: |
+          set -euo pipefail
+          if git grep -n -E 'features\.html#feat-(planning|routines|telegram|device|memory|vision|accessibility)' -- 'website/*.html'; then
+            echo 'Legacy feature fragments remain after replacement.'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add website/*.html
+          git commit -m 'fix(website): repair feature fragment links'
+          git push
