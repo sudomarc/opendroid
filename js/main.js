@@ -40,22 +40,30 @@ hamburger.focus();
 });
 }
 const revealElements = document.querySelectorAll('.reveal');
+const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+if ('IntersectionObserver' in window && !prefersReducedMotion) {
 const revealObserver = new IntersectionObserver((entries) => {
 entries.forEach(entry => {
 if (entry.isIntersecting) {
 entry.target.classList.add('visible');
+revealObserver.unobserve(entry.target);
 }
 });
 }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 revealElements.forEach(el => revealObserver.observe(el));
+} else {
+revealElements.forEach(el => el.classList.add('visible'));
+}
 document.querySelectorAll('.faq-question').forEach(btn => {
 btn.addEventListener('click', () => {
 const item = btn.closest('.faq-item');
-const answer = item.querySelector('.faq-answer');
+const answer = item?.querySelector('.faq-answer');
+if (!item || !answer) return;
 const isOpen = item.classList.contains('open');
 document.querySelectorAll('.faq-item.open').forEach(openItem => {
 openItem.classList.remove('open');
-openItem.querySelector('.faq-answer').style.maxHeight = '0';
+const openAnswer = openItem.querySelector('.faq-answer');
+if (openAnswer) openAnswer.style.maxHeight = '0';
 });
 if (!isOpen) {
 item.classList.add('open');
@@ -76,7 +84,7 @@ const btn = document.createElement('button');
 btn.type = 'button';
 btn.className = 'copy-btn';
 btn.setAttribute('aria-label', 'Copy to clipboard');
-btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2h9a2 2 0 0 1 2 2v1"></path></svg>';
 let opId = 0;
 let activeTimeout = null;
 btn.addEventListener('click', async () => {
@@ -84,17 +92,22 @@ const myOp = ++opId;
 const text = codeEl.textContent;
 let copied = false;
 try {
+if (navigator.clipboard?.writeText) {
 await navigator.clipboard.writeText(text);
 copied = true;
+} else {
+throw new Error('Clipboard API unavailable');
+}
 } catch (e) {
 const ta = document.createElement('textarea');
 ta.value = text;
+ta.setAttribute('readonly', '');
 ta.style.position = 'fixed';
 ta.style.opacity = '0';
 document.body.appendChild(ta);
 ta.select();
 try { copied = document.execCommand('copy'); } catch (e2) { copied = false; }
-document.body.removeChild(ta);
+ta.remove();
 }
 if (myOp !== opId) return;
 if (activeTimeout) clearTimeout(activeTimeout);
@@ -127,7 +140,7 @@ heroVideoToggle.setAttribute('aria-label', paused ? 'Play video' : 'Pause video'
 };
 heroVideoToggle.addEventListener('click', () => {
 if (heroVideo.paused) {
-heroVideo.play();
+heroVideo.play().catch(syncState);
 } else {
 heroVideo.pause();
 }
@@ -143,9 +156,11 @@ fetch('https://api.github.com/repos/yashab-cyber/opendroid')
 .then(data => {
 const stars = ghStats.querySelector('[data-stat="stars"]');
 const forks = ghStats.querySelector('[data-stat="forks"]');
-if (stars) stars.textContent = data.stargazers_count.toLocaleString();
-if (forks) forks.textContent = data.forks_count.toLocaleString();
+if (stars && Number.isFinite(data.stargazers_count)) stars.textContent = data.stargazers_count.toLocaleString();
+if (forks && Number.isFinite(data.forks_count)) forks.textContent = data.forks_count.toLocaleString();
+if (stars && forks && Number.isFinite(data.stargazers_count) && Number.isFinite(data.forks_count)) {
 ghStats.setAttribute('data-loaded', 'true');
+}
 })
 .catch(() => { /* leave hidden, no broken UI on failure */ });
 }
