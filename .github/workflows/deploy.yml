@@ -27,6 +27,26 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan reachable Git history for high-confidence secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          blocked_file_patterns='(^|/)(\.env($|\.)|.*\.(pem|key|p12|pfx|jks|keystore)$|credentials\.|secrets\.)'
+          if git rev-list --objects --all | grep -E "$blocked_file_patterns"; then
+            echo 'Potential secret-bearing filename found in reachable Git history.'
+            exit 1
+          fi
+          secret_pattern='BEGIN (RSA |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|gh[oprsu]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|sk-[A-Za-z0-9_-]{20,}'
+          matches="$(git log --all --full-history -G "$secret_pattern" --oneline -- . || true)"
+          if [[ -n "$matches" ]]; then
+            echo 'High-confidence secret pattern matched in reachable commit history:'
+            echo "$matches"
+            exit 1
+          fi
+          echo 'Reachable Git history secret scan passed.'
 
       - name: Validate workflow YAML
         run: |
