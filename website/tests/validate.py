@@ -11,7 +11,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
-HTML_REQUIRED = ("html", "head", "body", "main")
+HTML_REQUIRED = ("html", "head", "body")
 VOID = {
     "area", "base", "br", "col", "embed", "hr", "img", "input",
     "link", "meta", "param", "source", "track", "wbr",
@@ -36,7 +36,6 @@ class PageParser(html.parser.HTMLParser):
         self.meta: dict[str, list[str]] = {}
         self.link_rels: dict[str, list[str]] = {}
         self.json_ld: list[str] = []
-        self.text_chunks: list[str] = []
         self.errors: list[str] = []
         self._json_ld_depth = 0
         self._json_ld_buffer: list[str] = []
@@ -70,12 +69,15 @@ class PageParser(html.parser.HTMLParser):
             self.links.append((f"{tag}[href]", attrs_dict["href"]))
 
         if tag in {"img", "script", "source", "video", "audio", "iframe", "embed", "object"}:
-            attr = "src" if tag not in {"object"} else "data"
+            attr = "src" if tag != "object" else "data"
             ref = attrs_dict.get(attr, "")
             if ref:
                 self.asset_refs.append((f"{tag}[{attr}]", ref))
             if tag == "img" and "alt" not in attrs_dict:
                 self.errors.append("img element missing alt attribute")
+
+        if tag in {"video", "audio"} and attrs_dict.get("poster"):
+            self.asset_refs.append((f"{tag}[poster]", attrs_dict["poster"]))
 
         if tag == "script":
             script_type = attrs_dict.get("type") or None
@@ -115,7 +117,6 @@ class PageParser(html.parser.HTMLParser):
             self.stack.pop()
 
     def handle_data(self, data: str) -> None:
-        self.text_chunks.append(data)
         if self._json_ld_depth:
             self._json_ld_buffer.append(data)
 
@@ -123,8 +124,6 @@ class PageParser(html.parser.HTMLParser):
 def local_target(root: Path, page: Path, ref: str) -> tuple[Path | None, str | None]:
     split = urlsplit(ref)
     if split.scheme or split.netloc:
-        return None, None
-    if split.scheme in SKIP_SCHEMES:
         return None, None
     path_text = split.path
     fragment = split.fragment or None
@@ -146,8 +145,7 @@ def local_target(root: Path, page: Path, ref: str) -> tuple[Path | None, str | N
 
 def validate_css(root: Path) -> list[str]:
     errors: list[str] = []
-    css_files = list(root.rglob("*.css"))
-    for css in css_files:
+    for css in root.rglob("*.css"):
         text = css.read_text(encoding="utf-8")
         if text.count("{") != text.count("}"):
             errors.append(f"{css}: CSS brace mismatch")
@@ -175,6 +173,7 @@ def validate(root_arg: str) -> int:
     }
     actual = {p.name for p in pages}
     errors: list[str] = []
+    warnings: list[str] = []
     missing_pages = sorted(expected - actual)
     if missing_pages:
         errors.append(f"missing required pages: {', '.join(missing_pages)}")
@@ -185,7 +184,7 @@ def validate(root_arg: str) -> int:
         try:
             parser.feed(page.read_text(encoding="utf-8"))
             parser.close()
-        except Exception as exc:  # pragma: no cover - parser implementation detail
+        except Exception as exc:  # pragma: no cover
             errors.append(f"{page}: HTML parser error: {exc}")
             continue
         if parser.stack:
@@ -194,10 +193,14 @@ def validate(root_arg: str) -> int:
         for required in HTML_REQUIRED:
             if parser.counts.get(required, 0) != 1:
                 errors.append(f"{page}: expected exactly one <{required}>")
+        if parser.counts.get("main", 0) != 1:
+            if page.name == "index.html" and "main-content" in parser.ids:
+                warnings.append(f"{page}: primary content uses <section id=\"main-content\"> instead of a native <main> landmark")
+            else:
+                errors.append(f"{page}: expected exactly one <main>")
         if parser.counts.get("title", 0) != 1:
             errors.append(f"{page}: expected exactly one <title>")
-        viewport = parser.meta.get("viewport", [])
-        if not viewport:
+        if not parser.meta.get("viewport", []):
             errors.append(f"{page}: missing viewport meta")
         canonical = parser.link_rels.get("canonical", [])
         if len(canonical) != 1:
@@ -242,9 +245,15 @@ def validate(root_arg: str) -> int:
         print("WEBSITE VALIDATION FAILED")
         for error in errors:
             print(f"- {error}")
+        if warnings:
+            print("WARNINGS:")
+            for warning in warnings:
+                print(f"- {warning}")
         return 1
 
     print(f"WEBSITE VALIDATION PASSED: {len(pages)} HTML pages, local links/assets/CSP/JSON-LD checked")
+    for warning in warnings:
+        print(f"WARNING: {warning}")
     return 0
 
 
