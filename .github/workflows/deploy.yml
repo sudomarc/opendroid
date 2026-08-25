@@ -1,6 +1,12 @@
-name: Deploy OpenDroid Website
+name: Website CI & Deploy
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'website/**'
+      - '.github/workflows/deploy.yml'
   push:
     branches:
       - main
@@ -8,36 +14,53 @@ on:
       - 'website/**'
       - '.github/workflows/deploy.yml'
 
+# The validation job only needs read access. Deployment gets write access
+# at the job level because it publishes to the gh-pages branch.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  deploy:
-    concurrency: ci-${{ github.ref }}
+  validate:
+    name: Validate website
+    concurrency: website-ci-${{ github.event.pull_request.number || github.ref }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Validate HTML & Link Integrity
+      - name: Validate workflow YAML
         run: |
-          python3 -c "
-          import os, glob, re
-          html_files = glob.glob('website/*.html')
-          for f in html_files:
-              with open(f, 'r') as file:
-                  content = file.read()
-                  for tag in ['div', 'main', 'header', 'footer', 'section', 'nav']:
-                      open_c = len(re.findall(rf'<{tag}[\s>]', content, re.IGNORECASE))
-                      close_c = len(re.findall(rf'</{tag}>', content, re.IGNORECASE))
-                      assert open_c == close_c, f'Tag mismatch <{tag}> in {f}'
-          print('CI Validation passed successfully.')
-          "
+          ruby -e 'require "yaml"; ARGV.each { |f| YAML.parse_file(f); puts "YAML OK: #{f}" }' .github/workflows/*.yml
 
-      - name: Build Website (minify CSS/JS)
+      - name: Validate shell script syntax
+        run: bash -n website/build.sh
+
+      - name: Validate JavaScript syntax
+        run: |
+          node --check website/js/main.js
+          node --check website/js/theme-init.js
+
+      - name: Validate website source
+        run: python3 website/tests/validate.py website
+
+      - name: Run negative validation test
+        run: |
+          tmpdir="$(mktemp -d)"
+          cp -a website/. "$tmpdir/"
+          printf '\n<img src="__missing-ci-test__.png" alt="negative test">\n' >> "$tmpdir/index.html"
+          if python3 website/tests/validate.py "$tmpdir"; then
+            echo 'Negative test unexpectedly passed.'
+            exit 1
+          fi
+          echo 'Negative test correctly rejected a missing local asset.'
+
+      - name: Build Website
         run: bash website/build.sh
 
-      - name: Validate Website Dist Artifacts
+      - name: Validate generated website
+        run: python3 website/tests/validate.py website/dist
+
+      - name: Validate required dist artifacts
         run: |
           test -f ./website/dist/index.html
           test -f ./website/dist/about.html
@@ -49,9 +72,33 @@ jobs:
           test -f ./website/dist/terms.html
           test -f ./website/dist/css/style.css
           test -f ./website/dist/js/main.js
+          test -f ./website/dist/js/theme-init.js
           test -f ./website/dist/robots.txt
           test -f ./website/dist/sitemap.xml
-          echo "Website build dist validation passed."
+          echo 'Website dist artifact validation passed.'
+
+      - name: Ensure build output is not tracked
+        run: |
+          if git ls-files --error-unmatch website/dist >/dev/null 2>&1; then
+            echo 'website/dist is tracked; generated output must remain ignored.'
+            exit 1
+          fi
+          echo 'website/dist is not tracked.'
+
+  deploy:
+    name: Deploy GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    concurrency: website-deploy-main
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build Website
+        run: bash website/build.sh
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
