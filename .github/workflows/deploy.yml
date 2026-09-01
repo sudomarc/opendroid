@@ -83,19 +83,15 @@ jobs:
 
       - name: Validate required dist artifacts
         run: |
-          test -f ./website/dist/index.html
-          test -f ./website/dist/about.html
-          test -f ./website/dist/features.html
-          test -f ./website/dist/contributor.html
-          test -f ./website/dist/privacy.html
-          test -f ./website/dist/security.html
-          test -f ./website/dist/support.html
-          test -f ./website/dist/terms.html
-          test -f ./website/dist/css/style.css
-          test -f ./website/dist/js/main.js
-          test -f ./website/dist/js/theme-init.js
-          test -f ./website/dist/robots.txt
-          test -f ./website/dist/sitemap.xml
+          set -euo pipefail
+          required=(
+            index.html about.html features.html releases.html contributor.html
+            privacy.html security.html support.html terms.html 404.html
+            css/style.css js/main.js js/theme-init.js robots.txt sitemap.xml llms.txt
+          )
+          for file in "${required[@]}"; do
+            test -f "./website/dist/$file"
+          done
           echo 'Website dist artifact validation passed.'
 
       - name: Ensure build output is not tracked
