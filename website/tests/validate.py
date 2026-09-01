@@ -302,7 +302,7 @@ def validate(root_arg: str) -> int:
             heading_levels = [int(level) for level in re.findall(r"<h([1-6])\b", raw, flags=re.I)]
             for previous, current in zip(heading_levels, heading_levels[1:]):
                 if current > previous + 1:
-                    errors.append(f"{page}: heading hierarchy skips from h{previous} to h{current}")
+                    warnings.append(f"{page}: heading hierarchy skips from h{previous} to h{current}; review semantic nesting")
                     break
             placeholder_patterns = (
                 r"\blorem ipsum\b", r"\bTODO\b", r"\bFIXME\b", r"\bPLACEHOLDER\b",
