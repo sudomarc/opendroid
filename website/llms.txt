@@ -1,0 +1,17 @@
+# OpenDroid
+
+> OpenDroid is an open-source autonomous Android agent. This website documents its capabilities, releases, security posture, privacy policy, terms, contributors, and support resources.
+
+## Primary pages
+- [Home](https://yashab-cyber.github.io/opendroid/): Product overview and core capabilities.
+- [Features](https://yashab-cyber.github.io/opendroid/features.html): Detailed feature and architecture overview.
+- [Releases](https://yashab-cyber.github.io/opendroid/releases.html): Published release history and changelog.
+- [About](https://yashab-cyber.github.io/opendroid/about.html): Project mission and principles.
+- [Contributors](https://yashab-cyber.github.io/opendroid/contributor.html): Contributors and testers.
+- [Support](https://yashab-cyber.github.io/opendroid/support.html): Support and troubleshooting resources.
+- [Security](https://yashab-cyber.github.io/opendroid/security.html): Security practices and disclosures.
+- [Privacy](https://yashab-cyber.github.io/opendroid/privacy.html): Privacy information.
+- [Terms](https://yashab-cyber.github.io/opendroid/terms.html): Terms of service.
+
+## Source
+- [GitHub repository](https://github.com/yashab-cyber/opendroid): Source code, issues, releases, and project history.
