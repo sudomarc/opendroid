@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # build.sh — Build the static OpenDroid website.
-# Minifies CSS/JS without a Node runtime and copies publishable assets.
+# Copies publishable assets and performs syntax checks without a Node build runtime.
 #
 # Usage:
 #   cd website && bash build.sh
@@ -30,29 +30,11 @@ cp "$SCRIPT_DIR/sitemap.xml" "$DIST_DIR/"
 cp "$SCRIPT_DIR/robots.txt" "$DIST_DIR/"
 cp "$SCRIPT_DIR/llms.txt" "$DIST_DIR/"
 
-# Minify CSS conservatively: remove comments and redundant whitespace while
-# keeping quoted content, URLs, declarations, and brace structure intact.
-log "🎨 Minifying CSS..."
-for cssfile in "$DIST_DIR"/css/*.css; do
-  [ -f "$cssfile" ] || continue
-  original_size=$(wc -c < "$cssfile")
-  sed -E \
-    -e 's|/\*([^*]|\*+[^*/])*\*+/||g' \
-    -e 's/[[:space:]]+/ /g' \
-    -e 's/^[[:space:]]+|[[:space:]]+$//g' \
-    -e 's/[[:space:]]*([{};:,>])\s*/\1/g' \
-    "$cssfile" > "$cssfile.tmp"
-  mv "$cssfile.tmp" "$cssfile"
-  new_size=$(wc -c < "$cssfile")
-  log "   $(basename "$cssfile"): ${original_size}B → ${new_size}B"
-done
-
-# JavaScript is intentionally not aggressively minified here. The previous
-# whitespace-only transformation could corrupt source constructs. Keeping
-# valid source while serving it from the static site is safer than a fragile
-# regex minifier; defer true bundling/minification to a real JS toolchain if
-# the project adopts one.
-log "⚡ Validating JavaScript (no regex minification)..."
+# Keep source files intact. The previous regex-based CSS/JS minification could
+# corrupt valid source. The current static site is small enough that correctness
+# is preferable to an unsafe pseudo-minifier; a real bundler can be introduced
+# later if measurements justify it.
+log "⚡ Validating JavaScript syntax..."
 if command -v node >/dev/null 2>&1; then
   node --check "$DIST_DIR/js/main.js"
   node --check "$DIST_DIR/js/theme-init.js"
