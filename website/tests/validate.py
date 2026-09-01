@@ -11,28 +11,19 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from urllib.parse import urlsplit
 
-
 HTML_REQUIRED = ("html", "head", "body")
 INDEXABLE_PAGES = {
-    "index.html",
-    "about.html",
-    "contributor.html",
-    "features.html",
-    "privacy.html",
-    "releases.html",
-    "security.html",
-    "support.html",
-    "terms.html",
+    "index.html", "about.html", "contributor.html", "features.html",
+    "privacy.html", "releases.html", "security.html", "support.html", "terms.html",
 }
 VOID = {
     "area", "base", "br", "col", "embed", "hr", "img", "input", "link",
     "meta", "param", "source", "track", "wbr",
 }
 CHECKED_NESTING = {
-    "html", "head", "body", "main", "header", "footer", "nav",
-    "section", "article", "div", "ul", "ol", "li", "button",
+    "html", "head", "body", "main", "header", "footer", "nav", "section",
+    "article", "div", "ul", "ol", "li", "button",
 }
-
 
 class PageParser(html.parser.HTMLParser):
     def __init__(self, path: Path) -> None:
@@ -47,7 +38,6 @@ class PageParser(html.parser.HTMLParser):
         self.meta: dict[str, list[str]] = {}
         self.link_rels: dict[str, list[str]] = {}
         self.json_ld: list[str] = []
-        self.headings: list[tuple[int, str]] = []
         self.errors: list[str] = []
         self._json_ld_depth = 0
         self._json_ld_buffer: list[str] = []
@@ -56,18 +46,15 @@ class PageParser(html.parser.HTMLParser):
         tag = tag.lower()
         attrs_dict = {k.lower(): (v or "") for k, v in attrs}
         self.counts[tag] = self.counts.get(tag, 0) + 1
-
         ident = attrs_dict.get("id")
         if ident:
             if ident in self.ids:
                 self.errors.append(f"duplicate id={ident!r}")
             self.ids.add(ident)
-
         if tag == "meta":
             key = attrs_dict.get("name") or attrs_dict.get("property") or attrs_dict.get("http-equiv")
             if key:
                 self.meta.setdefault(key.lower(), []).append(attrs_dict.get("content", ""))
-
         if tag == "link":
             rel = attrs_dict.get("rel", "").lower()
             href = attrs_dict.get("href", "")
@@ -76,10 +63,8 @@ class PageParser(html.parser.HTMLParser):
                     self.link_rels.setdefault(rel_token, []).append(href)
             if href:
                 self.links.append(("link[href]", href))
-
         if tag in {"a", "area"} and attrs_dict.get("href"):
             self.links.append((f"{tag}[href]", attrs_dict["href"]))
-
         if tag in {"img", "script", "source", "video", "audio", "iframe", "embed", "object"}:
             attr = "src" if tag != "object" else "data"
             ref = attrs_dict.get(attr, "")
@@ -87,22 +72,14 @@ class PageParser(html.parser.HTMLParser):
                 self.asset_refs.append((f"{tag}[{attr}]", ref))
             if tag == "img" and "alt" not in attrs_dict:
                 self.errors.append("img element missing alt attribute")
-
         if tag in {"video", "audio"} and attrs_dict.get("poster"):
             self.asset_refs.append((f"{tag}[poster]", attrs_dict["poster"]))
-
-        if tag.startswith("h") and len(tag) == 2 and tag[1].isdigit():
-            level = int(tag[1])
-            if 1 <= level <= 6:
-                self.headings.append((level, ""))
-
         if tag == "script":
             script_type = attrs_dict.get("type") or None
             self.scripts.append((script_type, attrs_dict.get("src", "")))
             if script_type and script_type.lower() == "application/ld+json":
                 self._json_ld_depth = 1
                 self._json_ld_buffer = []
-
         if tag in CHECKED_NESTING and tag not in VOID:
             self.stack.append(tag)
 
@@ -125,9 +102,7 @@ class PageParser(html.parser.HTMLParser):
             self.errors.append(f"unexpected closing tag </{tag}>")
             return
         if self.stack[-1] != tag:
-            self.errors.append(
-                f"misnested closing tag </{tag}>; expected </{self.stack[-1]}>"
-            )
+            self.errors.append(f"misnested closing tag </{tag}>; expected </{self.stack[-1]}>")
             while self.stack and self.stack[-1] != tag:
                 self.stack.pop()
         if self.stack and self.stack[-1] == tag:
@@ -187,10 +162,12 @@ def validate_sitemap(root: Path, canonical_origin: str, expected_pages: set[str]
         root_element = tree.getroot()
     except ET.ParseError as exc:
         return [f"sitemap.xml: invalid XML: {exc}"]
-
     namespace = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
     locs = [el.text.strip() for el in root_element.findall(f"{namespace}url/{namespace}loc") if el.text]
-    expected_urls = {canonical_origin.rstrip("/") + ("/" if name == "index.html" else f"/{name}") for name in expected_pages}
+    expected_urls = {
+        canonical_origin.rstrip("/") + ("/" if name == "index.html" else f"/{name}")
+        for name in expected_pages
+    }
     if len(locs) != len(set(locs)):
         errors.append("sitemap.xml: duplicate <loc> entries")
     unexpected = sorted(set(locs) - expected_urls)
@@ -227,16 +204,13 @@ def validate(root_arg: str) -> int:
     if not root.is_dir():
         print(f"ERROR: website root does not exist: {root}")
         return 2
-
     pages = sorted(root.glob("*.html"))
-    expected = INDEXABLE_PAGES
     actual = {p.name for p in pages}
     errors: list[str] = []
     warnings: list[str] = []
-    missing_pages = sorted(expected - actual)
+    missing_pages = sorted(INDEXABLE_PAGES - actual)
     if missing_pages:
         errors.append(f"missing required pages: {', '.join(missing_pages)}")
-
     if "404.html" not in actual:
         errors.append("missing required custom 404.html")
 
@@ -249,13 +223,12 @@ def validate(root_arg: str) -> int:
         try:
             parser.feed(page.read_text(encoding="utf-8"))
             parser.close()
-        except Exception as exc:  # pragma: no cover
+        except Exception as exc:
             errors.append(f"{page}: HTML parser error: {exc}")
             continue
         if parser.stack:
             errors.append(f"{page}: unclosed tags: {', '.join(parser.stack)}")
         parsed[page] = parser
-
         for required in HTML_REQUIRED:
             if parser.counts.get(required, 0) != 1:
                 errors.append(f"{page}: expected exactly one <{required}>")
@@ -266,19 +239,17 @@ def validate(root_arg: str) -> int:
                 errors.append(f"{page}: expected exactly one <main>")
         if parser.counts.get("title", 0) != 1:
             errors.append(f"{page}: expected exactly one <title>")
-
-        title = (parser.meta.get("title", [""])[0] if parser.meta.get("title") else "")
-        if parser.counts.get("title", 0) == 1:
-            raw = page.read_text(encoding="utf-8")
-            match = re.search(r"<title>(.*?)</title>", raw, flags=re.I | re.S)
-            title = re.sub(r"\s+", " ", match.group(1)).strip() if match else ""
+        title = ""
+        raw = page.read_text(encoding="utf-8")
+        match = re.search(r"<title>(.*?)</title>", raw, flags=re.I | re.S)
+        if match:
+            title = re.sub(r"\s+", " ", match.group(1)).strip()
         if page.name in INDEXABLE_PAGES:
             if not title:
                 errors.append(f"{page}: empty title")
             elif not 10 <= len(title) <= 70:
                 warnings.append(f"{page}: title length is {len(title)} characters")
             titles[page.name] = title
-
         if not parser.meta.get("viewport", []):
             errors.append(f"{page}: missing viewport meta")
         canonical = parser.link_rels.get("canonical", [])
@@ -291,7 +262,6 @@ def validate(root_arg: str) -> int:
                 parsed_canonical = urlsplit(canonical_url)
                 if parsed_canonical.scheme != "https" or parsed_canonical.fragment or parsed_canonical.query:
                     errors.append(f"{page}: canonical must be a clean HTTPS URL")
-
             descriptions_for_page = parser.meta.get("description", [])
             if len(descriptions_for_page) != 1 or not descriptions_for_page[0].strip():
                 errors.append(f"{page}: expected one non-empty meta description")
@@ -300,19 +270,13 @@ def validate(root_arg: str) -> int:
                 descriptions[page.name] = desc
                 if not 50 <= len(desc) <= 170:
                     warnings.append(f"{page}: meta description length is {len(desc)} characters")
-
-            og_required = {
-                "og:title": "title",
-                "og:description": "description",
-                "og:image": "image",
-                "og:url": "url",
-                "og:type": "type",
-            }
-            for key, label in og_required.items():
+            for key, label in {
+                "og:title": "title", "og:description": "description", "og:image": "image",
+                "og:url": "url", "og:type": "type",
+            }.items():
                 values = parser.meta.get(key, [])
                 if len(values) != 1 or not values[0].strip():
                     errors.append(f"{page}: missing required Open Graph {label}")
-
         csp_values = parser.meta.get("content-security-policy", [])
         if len(csp_values) != 1:
             errors.append(f"{page}: expected exactly one CSP meta")
@@ -326,26 +290,28 @@ def validate(root_arg: str) -> int:
                 errors.append(f"{page}: CSP connect-src contains wildcard")
             if re.search(r"(?:^|\s)script-src\s+[^;]*unsafe-inline", csp):
                 errors.append(f"{page}: CSP script-src contains unsafe-inline")
-
         for raw_json in parser.json_ld:
             try:
                 json.loads(raw_json)
             except json.JSONDecodeError as exc:
                 errors.append(f"{page}: invalid JSON-LD: {exc}")
-
         if page.name in INDEXABLE_PAGES:
-            raw = page.read_text(encoding="utf-8")
             h1_count = len(re.findall(r"<h1\b", raw, flags=re.I))
             if h1_count != 1:
                 errors.append(f"{page}: expected exactly one <h1>, found {h1_count}")
-            if re.search(r"\b(?:lorem ipsum|placeholder text|coming soon)\b", raw, flags=re.I):
-                warnings.append(f"{page}: placeholder-like text detected; review before publication")
             heading_levels = [int(level) for level in re.findall(r"<h([1-6])\b", raw, flags=re.I)]
             for previous, current in zip(heading_levels, heading_levels[1:]):
                 if current > previous + 1:
                     errors.append(f"{page}: heading hierarchy skips from h{previous} to h{current}")
                     break
-
+            placeholder_patterns = (
+                r"\blorem ipsum\b", r"\bTODO\b", r"\bFIXME\b", r"\bPLACEHOLDER\b",
+                r"Your Name Here",
+            )
+            for pattern in placeholder_patterns:
+                if re.search(pattern, raw, flags=re.I):
+                    warnings.append(f"{page}: placeholder-like text detected ({pattern}); review before publication")
+                    break
         for kind, ref in parser.links + parser.asset_refs:
             target, fragment = local_target(root, page, ref)
             if target is None:
@@ -382,11 +348,9 @@ def validate(root_arg: str) -> int:
     errors.extend(validate_css(root))
     errors.extend(validate_sitemap(root, expected_origin, INDEXABLE_PAGES))
     errors.extend(validate_robots(root, expected_origin + "/sitemap.xml"))
-
     source_maps = list(root.rglob("*.map"))
     if source_maps:
         errors.append("production source maps present: " + ", ".join(str(p.relative_to(root)) for p in source_maps))
-
     if errors:
         print("WEBSITE VALIDATION FAILED")
         for error in errors:
@@ -396,12 +360,10 @@ def validate(root_arg: str) -> int:
             for warning in warnings:
                 print(f"- {warning}")
         return 1
-
     print(f"WEBSITE VALIDATION PASSED: {len(pages)} HTML pages, local links/assets/CSP/metadata/JSON-LD/sitemap checked")
     for warning in warnings:
         print(f"WARNING: {warning}")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(validate(sys.argv[1] if len(sys.argv) > 1 else "website"))
