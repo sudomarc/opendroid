@@ -8,13 +8,14 @@ on:
       - 'website/**'
       - 'docs/**'
       - '**.md'
-  push:
     branches:
       - main
     paths-ignore:
       - 'website/**'
       - 'docs/**'
       - '**.md'
+
+  workflow_dispatch:
 
 permissions:
   contents: read
